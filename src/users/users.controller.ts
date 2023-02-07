@@ -14,7 +14,6 @@ export class UserController{
         res.status(200).send({result:response})
     }
 
-    // pipe not working
     @Post('add')
     @UsePipes(new ValidationPipe({ forbidNonWhitelisted:true }))
     async adduser(@Req() req, @Res() res, @Body() body:UserDTO){

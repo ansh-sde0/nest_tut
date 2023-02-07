@@ -1,23 +1,26 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { User,UserDocument } from './schemas/users.schema'
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from './entities/users.entity';
+import { MongoRepository } from "typeorm"
 
 @Injectable()
 export class UserService {
 
-    constructor(@InjectModel(User.name) private readonly userModel:Model<UserDocument>) {}
+    constructor(@InjectRepository(User) private readonly userModel:MongoRepository<User>) {}
 
-    async getusers(){
+    getusers(){
 
-        const all_users = await this.userModel.find({})
+        const all_users = this.userModel.find()
         return all_users
     }
 
     async userexists(email){
         
         const email_exists = await this.userModel.find({
-            email:email
+
+            where: {
+                email:email
+            }
         })
         return email_exists
     }   
@@ -28,8 +31,10 @@ export class UserService {
             
         if (!user_exists.length){
 
-            const user = new this.userModel(user_body)
-            user.save()
+            const user = new User()
+            Object.assign(user,user_body)
+
+            await this.userModel.insertOne(user)
 
             return 'User added'
         }
@@ -42,9 +47,9 @@ export class UserService {
 
         if (user_exists.length){
             
-            const result = await this.userModel.updateOne({email:user_req.query.email},{...user_body})
-
-            if (result.acknowledged){
+            const result = await this.userModel.updateOne({email:user_req.query.email},{$set:user_body})
+            
+            if (result.result.nModified){
                 return 'User updated'
             }
             return 'User updated failed'
@@ -60,8 +65,8 @@ export class UserService {
         if (user_exists.length){
 
             const result = await this.userModel.deleteOne({email:user_req.query.email})
-
-            if (result.acknowledged){
+            
+            if (result.deletedCount){
                 return 'User deleted'
             }
 
